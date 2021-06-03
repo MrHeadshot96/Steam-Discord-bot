@@ -37,9 +37,6 @@ async def on_message(message):
         for entry in feed.entries:
                 article_title = entry.title
                 article_link = entry.link
-                article_published_at = entry.published # Unicode string
-                article_published_at_parsed = entry.published_parsed # Time object
-                content = entry.summary
                 response = ("{}[{}]".format(article_title, article_link))
                 await message.channel.send(response)
                 # print ("Published by {}".format(article_author)) 
