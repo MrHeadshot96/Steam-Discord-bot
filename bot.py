@@ -81,6 +81,7 @@ async def command_handler(message):
     elif "/echo" in message.content:
         response = message.content
         response = response.replace('/echo ','')
+        await message.delete()
         await message.channel.send(response)
     else:
         await message.channel.send("/help - Displays this massage \n /ccp - The CCP filter \n /add_ccp - add word to CCP filter \n /free - Show free games \n /settings - Display the current settings \n /counter - N-Word counter \n /echo - echoes text back")
