@@ -2,6 +2,7 @@ import os
 import feedparser
 import webbrowser
 import discord
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,9 +10,9 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 filterd = ["china","taiwan"]
 nword_list = ["nigga","nigger"]
-counter_score = {"name":"value"}
 client = discord.Client()
 CCP = False
+
 @client.event
 async def command_handler(message):
     if "/ccp" in message.content:
@@ -26,7 +27,8 @@ async def command_handler(message):
     elif "/help" in message.content:
         await message.channel.send("/help - Displays this massage \n /ccp - The CCP filter \n /add_ccp - add word to CCP filter \n /free - Show free games \n /settings - Display the current settings \n /counter - N-Word counter \n /echo - echoes text back")
     elif "/add_ccp" in message.content:
-        global filterd
+        with open('filtered.json') as filtered:
+            filterd = json.load(filtered)
         text = message.content
         text = text.replace('/add_ccp ','')
         if text in filterd:
@@ -36,6 +38,8 @@ async def command_handler(message):
             filterd += [text]
             response = text + " added."
             await message.channel.send(response)
+        with open('filtered.json','w') as filtered:
+            json.dump(filterd,filtered)
         print (filterd)
     elif "/free" in message.content:
         games = ["Free games :video_game: :"]
@@ -54,29 +58,26 @@ async def command_handler(message):
         response = "CCP filter: " + str(CCP) + "\n" + "filter list: " + str(filterd)
         await message.channel.send(response)
     elif "/counter" in message.content:
-        global counter_score
-        cs = counter_score
+        with open('counter.json') as counter:
+            cs = json.load(counter)
         if "@" in message.content:
             id = message.content
-            id = id.replace('/counter','')
+            id = id.replace('/counter ','')
             id = id.replace('@','')
             id = id.replace('>','')
             id = id.replace('<','')
             id = id.replace('!','')
-            id = id.replace(' ','')
             user = await client.fetch_user(int(id))
             user = user.name
             user = str(user)
             if user in cs:
-                response = str(cs[user]) + " times." 
+                response = user + " said the N-Word " +  str(cs[user]) + " times." 
             else:
                 response = user + " has not said the N-Word."
         else:
-            response = str(counter_score)
-        response = response.replace('{','')
-        response = response.replace('}','')
-        response = response.replace(',','\n')
-        response = response.replace('\'','')
+            response = ""
+            for name in cs:
+                response += name + " said the N-Word " +  str(cs[name]) + " times.\n"
         await message.channel.send(response)
     elif "/echo" in message.content:
         response = message.content
@@ -87,6 +88,8 @@ async def command_handler(message):
         await message.channel.send("/help - Displays this massage \n /ccp - The CCP filter \n /add_ccp - add word to CCP filter \n /free - Show free games \n /settings - Display the current settings \n /counter - N-Word counter \n /echo - echoes text back")
 @client.event
 async def ccp_filter(message):
+    with open('filtered.json') as filtered:
+        filterd = json.load(filtered)
     for filter in filterd:
             if filter in message.content.lower():
                 await message.delete()
@@ -98,8 +101,8 @@ async def n_counter(message):
     for nword in nword_list:
         if nword in message.content.lower():
             name = message.author.name
-            global counter_score
-            cs = counter_score
+            with open('counter.json') as counter:
+                cs = json.load(counter)
             if name in cs:
                 val = cs[name]
                 val2 = message.content.lower().count(nword)
@@ -107,9 +110,11 @@ async def n_counter(message):
             else:
                 val2 = message.content.lower().count(nword)
                 cs.update({name : val2})
+            with open('counter.json','w') as counter:
+                json.dump(cs,counter)
 @client.event
 async def on_ready():
-    
+
     for guild in client.guilds:
         if guild.name == GUILD:
             break
@@ -118,7 +123,12 @@ async def on_ready():
         f'{guild.name}(id: {guild.id})\n'
         f'CCP filter:{CCP}'
     )
-    
+    with open('counter.json') as counter:
+        db_data = json.load(counter)
+    with open('filtered.json') as filtered:
+        db_data_2 = json.load(filtered)
+    print (db_data)
+    print (db_data_2)
 @client.event
 async def on_message(message):
     if message.author.id != client.user.id:
