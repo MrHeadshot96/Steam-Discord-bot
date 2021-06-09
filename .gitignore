@@ -18,6 +18,8 @@
 .tmproj
 nbproject
 Thumbs.db
+filtered.json
+counter.json
 
 # Node modules
 /node_modules

@@ -55,6 +55,8 @@ async def command_handler(message):
         response = response.replace(',','\n')
         await message.channel.send(response)
     elif "/settings" in message.content:
+        with open('filtered.json') as filtered:
+            filterd = json.load(filtered)
         response = "CCP filter: " + str(CCP) + "\n" + "filter list: " + str(filterd)
         await message.channel.send(response)
     elif "/counter" in message.content:
