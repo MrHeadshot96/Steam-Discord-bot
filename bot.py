@@ -25,7 +25,7 @@ async def command_handler(message):
         response = "CCP filter : " + str(CCP)
         await message.channel.send(response)
     elif "/help" in message.content:
-        await message.channel.send("/help - Displays this massage \n /ccp - The CCP filter \n /add_ccp - add word to CCP filter \n /free - Show free games \n /settings - Display the current settings \n /counter - N-Word counter \n /echo - echoes text back")
+        await message.channel.send("/help - Displays this massage \n /ccp - The CCP filter \n /add_ccp - add word to CCP filter \n /free - Show free games \n /counter - N-Word counter \n /echo - echoes text back")
     elif "/add_ccp" in message.content:
         with open('filtered.json') as filtered:
             filterd = json.load(filtered)
@@ -54,10 +54,12 @@ async def command_handler(message):
         response = response.replace('\'','')
         response = response.replace(',','\n')
         await message.channel.send(response)
-    elif "/settings" in message.content:
+    elif "/data" in message.content:
         with open('filtered.json') as filtered:
             filterd = json.load(filtered)
-        response = "CCP filter: " + str(CCP) + "\n" + "filter list: " + str(filterd)
+        with open('counter.json') as counter:
+            cs = json.load(counter)
+        response = "CCP filter: " + str(CCP) + "\n" + "filter list: " + str(filterd) + "\n" + str(cs)
         await message.channel.send(response)
     elif "/counter" in message.content:
         with open('counter.json') as counter:
@@ -87,7 +89,7 @@ async def command_handler(message):
         await message.delete()
         await message.channel.send(response)
     else:
-        await message.channel.send("/help - Displays this massage \n /ccp - The CCP filter \n /add_ccp - add word to CCP filter \n /free - Show free games \n /settings - Display the current settings \n /counter - N-Word counter \n /echo - echoes text back")
+        await message.channel.send("/help - Displays this massage \n /ccp - The CCP filter \n /add_ccp - add word to CCP filter \n /free - Show free games \n /counter - N-Word counter \n /echo - echoes text back")
 @client.event
 async def ccp_filter(message):
     with open('filtered.json') as filtered:
