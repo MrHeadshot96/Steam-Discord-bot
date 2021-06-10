@@ -8,9 +8,10 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
+intents = discord.Intents.all()
+client = discord.Client(intents=intents)
 filterd = ["china","taiwan"]
 nword_list = ["nigga","nigger"]
-client = discord.Client()
 CCP = False
 
 @client.event
@@ -59,7 +60,9 @@ async def command_handler(message):
             filterd = json.load(filtered)
         with open('counter.json') as counter:
             cs = json.load(counter)
-        response = "CCP filter: " + str(CCP) + "\n" + "filter list: " + str(filterd) + "\n" + str(cs)
+        with open('social.json') as social:
+            sc = json.load(social)
+        response = "CCP filter: " + str(CCP) + "\n" + "filter list: " + str(filterd) + "\n \n" + str(cs) + "\n \n" + str(sc)
         await message.channel.send(response)
     elif "/counter" in message.content:
         with open('counter.json') as counter:
@@ -83,6 +86,25 @@ async def command_handler(message):
             for name in cs:
                 response += name + " said the N-Word " +  str(cs[name]) + " times.\n"
         await message.channel.send(response)
+    elif "/credit" in message.content:
+        with open('social.json') as social:
+            sc = json.load(social)
+        if "@" in message.content:
+            id = message.content
+            id = id.replace('/credit ','')
+            id = id.replace('@','')
+            id = id.replace('>','')
+            id = id.replace('<','')
+            id = id.replace('!','')
+            user = await client.fetch_user(int(id))
+            user = str(user.name)
+            response = user + "  = " +  str(sc[id]) + " points." 
+        else:
+            response = ""
+            for id in sc:
+                user = await client.fetch_user(int(id))
+                response += str(user.name) + " = " +  str(sc[id]) + " points.\n"
+        await message.channel.send(response)
     elif "/echo" in message.content:
         response = message.content
         response = response.replace('/echo ','')
@@ -98,7 +120,15 @@ async def ccp_filter(message):
             if filter in message.content.lower():
                 await message.delete()
                 print ("deleted:[",message.content,"] -" , message.author.name, "[",message.id,"]")
-                response =  message.author.name + " your message has been logged and reported." 
+                with open('social.json') as social:
+                    sc = json.load(social)
+                U_id = str(message.author.id)
+                print (U_id)
+                val = sc[U_id] - 5
+                sc[U_id] = val
+                with open('social.json','w') as social_W:
+                    json.dump(sc,social_W)
+                response =  message.author.name + " your message has been logged and reported. Currently " + str(val) + " points." 
                 await message.channel.send(response)
 @client.event               
 async def n_counter(message):
@@ -127,12 +157,52 @@ async def on_ready():
         f'{guild.name}(id: {guild.id})\n'
         f'CCP filter:{CCP}'
     )
+    print ( str(guild.member_count) + " members:")
+    print (guild.name)
+    filesize = os.path.getsize("social.json")
+    if filesize == 0:
+        arr = {"EMPTY":0}
+        arr.popitem()
+        for member in guild.members:
+            if member.name == client.user.name:
+                pass
+            else:
+                print (member.id)
+                arr[member.id] = 1000
+                with open('social.json','w') as Soc_Cre_W:
+                        json.dump(arr,Soc_Cre_W)
+    else:
+        with open('social.json') as Soc_Cre:
+            sc_data = json.load(Soc_Cre)
+        for member in guild.members:
+            if member.name == client.user.name:
+                pass
+            else:
+                print (member.id)
+                if str(member.id) in sc_data:
+                    pass
+                else:
+                    sc_data.update({member.id : 1000})
+                    with open('social.json','w') as Soc_Cre_W:
+                        json.dump(sc_data,Soc_Cre_W)
     with open('counter.json') as counter:
         db_data = json.load(counter)
     with open('filtered.json') as filtered:
         db_data_2 = json.load(filtered)
     print (db_data)
     print (db_data_2)
+
+@client.event
+async def on_member_join(member):
+    id = str(member.id)
+    with open('social.json') as Soc_Cre:
+            sc_data = json.load(Soc_Cre)
+    if id in sc_data:
+        pass
+    else:
+        sc_data.update({id : 1000})
+        with open('social.json','w') as Soc_Cre_W:
+            json.dump(sc_data,Soc_Cre_W)
 @client.event
 async def on_message(message):
     if message.author.id != client.user.id:
