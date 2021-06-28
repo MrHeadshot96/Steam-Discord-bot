@@ -3,7 +3,6 @@ import feedparser
 import webbrowser
 import discord
 import json
-from art_parser.py import splash
 from dotenv import load_dotenv
 
 load_dotenv()
