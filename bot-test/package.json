@@ -1,0 +1,25 @@
+{
+  "name": "steam-discord-bot",
+  "version": "1.0.0",
+  "description": "bot",
+  "main": "index.js",
+  "engines": {
+      "node": "16.3.0",
+      "npm": "7.15.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+	"start": "python bot.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MrHeadshot96/Steam-Discord-bot.git"
+  },
+  "author": "george",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MrHeadshot96/Steam-Discord-bot/issues"
+  },
+  "homepage": "https://github.com/MrHeadshot96/Steam-Discord-bot#readme"
+}
+

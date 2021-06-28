@@ -3,6 +3,7 @@ import feedparser
 import webbrowser
 import discord
 import json
+from art_parser.py import splash
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -161,8 +162,7 @@ async def on_ready():
     print (guild.name)
     filesize = os.path.getsize("social.json")
     if filesize == 0:
-        arr = {"EMPTY":0}
-        arr.popitem()
+        arr = {}
         for member in guild.members:
             if member.name == client.user.name:
                 pass
