@@ -14,8 +14,8 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 help_message = "/free - free games \n/counter - n-word counter"
-command_list = ["ccp","counter","free","refresh"]
-n_word = ["a","b"]
+command_list = ["counter","free","refresh"]
+n_word = ["nigger","nigga"]
 filterd = ["china","taiwan"]
 mem = {}
 social = {}
@@ -23,7 +23,7 @@ counter = {}
 version = 1
 CCP = False
 
-async def report(message):
+async def report_mes(message):
     if not (path.exists("log")):
         os.mkdir('log')
     file_name ="log/log"
@@ -34,8 +34,9 @@ async def report(message):
     else:
         mess += str(await time_n())+str(message.guild)+":"+str(message.author)+"\""+str(message.content)+"\""
     print (mess)
-    log_f = open(file_name,'w')
-    log_f.write(mess)
+    log_f = open(file_name,'a')
+    log_f.write(mess+"\n")
+    log_f.close()
     
 async def time_n():
     now = datetime.now()
@@ -127,14 +128,14 @@ async def memory_save(version,guild):
     mem["counter"] = counter
     json.dump(mem,memory, indent=4)
     memory.close()
-    
+        
 @client.event
 async def command_handler(message):
     content = message.content.split()
     command = content[0]
     command = command.replace('/','')
     if command in command_list:
-        await report (message)
+        await report_mes (message)
         if command == "free":
             response = await feed_pars()
         elif command == "counter":
@@ -145,7 +146,7 @@ async def command_handler(message):
             response = "refreshed"
         await message.channel.send(response)
     else:
-        print (await time_n(),message.author,"displayed help_message")
+        await report_mes (message)
         response = help_message
         await message.channel.send(response)
     
@@ -154,22 +155,32 @@ async def ccp_filter(message):
     pass
     
 async def n_counter(message):
-    pass
+    for nword in n_word:
+        if nword in message.content.lower():
+            name = message.author.name
+            if name in counter:
+                val = counter[name]
+                val2 = message.content.lower().count(nword)
+                counter[name] = val + val2
+            else:
+                val2 = message.content.lower().count(nword)
+                counter.update({name : val2})
+            global version
+            await memory_save(version,message.guild)
    
 @client.event
 async def on_ready():
     splash()
     global mem
     for guild in client.guilds:
-        print (guild.name,"id:",guild.id)
-        print ("    ", str(guild.member_count) + " members:")
-        mem = await memory_init(mem,guild)
-        for member in guild.members:
-            print ("        ",member.name,"id:",member.id)
         print(
             f'{client.user} v{version} is connected to the following guild:\n'
             f'{await time_n()}{guild.name}(id: {guild.id})\n'
         )
+        print ("    ", str(guild.member_count) + " members:")
+        mem = await memory_init(mem,guild)
+        for member in guild.members:
+            print ("        ",member.name,"id:",member.id)
     
 @client.event
 async def on_member_join(member):
@@ -179,7 +190,7 @@ async def on_member_join(member):
     if not(id in mem["social"]):
         mem["social"].update({id : 1000})
         global version
-        memory_save(version,member.guild)
+        await memory_save(version,member.guild)
     
 @client.event
 async def on_message(message):
@@ -189,9 +200,8 @@ async def on_message(message):
         if message.content.startswith("/"):
             await command_handler(message)
         else:
-            await report (message)
             if CCP:
                 await ccp_filter(message)
             await n_counter(message)
-        
+            await report_mes (message)
 client.run(TOKEN)
