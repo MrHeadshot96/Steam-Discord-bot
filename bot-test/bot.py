@@ -7,14 +7,14 @@ import os.path
 from os import path
 from art_parse import splash
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-GUILD = os.getenv('DISCORD_GUILD')
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
-help_message = "help||"
-command_list = ["ccp","counter","free"]
+help_message = "/free - free games \n/counter - n-word counter"
+command_list = ["ccp","counter","free","refresh"]
 n_word = ["a","b"]
 filterd = ["china","taiwan"]
 mem = {}
@@ -22,6 +22,25 @@ social = {}
 counter = {}
 version = 1
 CCP = False
+
+async def report(message):
+    if not (path.exists("log")):
+        os.mkdir('log')
+    file_name ="log/log"
+    file_name +="."+str(message.guild.id)+"."+ str(message.guild.name) +".txt"
+    mess = ""
+    if message in command_list:
+        mess += str(await time_n())+str(message.guild)+":"+str(message.author)+"used command"+str(command)
+    else:
+        mess += str(await time_n())+str(message.guild)+":"+str(message.author)+"\""+str(message.content)+"\""
+    print (mess)
+    log_f = open(file_name,'w')
+    log_f.write(mess)
+    
+async def time_n():
+    now = datetime.now()
+    current_time = now.strftime("[%D|%H:%M:%S]")
+    return current_time
 
 async def id_clean(id):
     id = id.replace('@','')
@@ -73,8 +92,10 @@ async def memory_init(mem,guild):
     if not (path.exists("cache")):
         os.mkdir('cache')
     file_name ="cache/cache"
-    file_name +=str(guild.name) + str(version) +".json"
+    file_name +="."+str(guild.id)+"."+ str(version) +".json"
     if not (path.exists(file_name)):
+        mem["guild"] = guild.name
+        mem["guild.id"] = guild.id
         mem["filterd"] = filterd
         mem["n_word"] = n_word
         mem["CCP"] = CCP
@@ -95,7 +116,9 @@ async def memory_init(mem,guild):
     memory.close()
     return mem
     
-async def memory_save():
+async def memory_save(version,guild):
+    file_name ="cache/cache"
+    file_name +="."+str(guild.id)+"."+ str(version) +".json"
     memory = open(file_name,'w')
     mem["n_word"] = n_word
     mem["filterd"] = filterd
@@ -110,15 +133,21 @@ async def command_handler(message):
     content = message.content.split()
     command = content[0]
     command = command.replace('/','')
-    response = help_message
     if command in command_list:
-        print (command,"\n")
+        await report (message)
         if command == "free":
             response = await feed_pars()
         elif command == "counter":
-            print(len(counter))
             response = await counter_display(message)
-    await message.channel.send(response)
+        elif command == "refresh":
+            global mem
+            mem = await memory_init(mem,message.guild)
+            response = "refreshed"
+        await message.channel.send(response)
+    else:
+        print (await time_n(),message.author,"displayed help_message")
+        response = help_message
+        await message.channel.send(response)
     
     
 async def ccp_filter(message):
@@ -129,34 +158,38 @@ async def n_counter(message):
    
 @client.event
 async def on_ready():
+    splash()
+    global mem
     for guild in client.guilds:
-        if guild.name == GUILD:
-            global mem
-            mem = await memory_init(mem,guild)
-            splash()
-            print (guild.name,"id:",guild.id)
-            print ("    ", str(guild.member_count) + " members:")
-            for member in guild.members:
-                print ("        ",member.name,"id:",member.id)
-            break
-    print(
-        f'{client.user} v{version} is connected to the following guild:\n'
-        f'{guild.name}(id: {guild.id})\n'
-    )
+        print (guild.name,"id:",guild.id)
+        print ("    ", str(guild.member_count) + " members:")
+        mem = await memory_init(mem,guild)
+        for member in guild.members:
+            print ("        ",member.name,"id:",member.id)
+        print(
+            f'{client.user} v{version} is connected to the following guild:\n'
+            f'{await time_n()}{guild.name}(id: {guild.id})\n'
+        )
     
 @client.event
 async def on_member_join(member):
+    global mem
+    mem = await memory_init(mem,member.guild)
     id = str(member.id)
     if not(id in mem["social"]):
         mem["social"].update({id : 1000})
-        memory_save()
+        global version
+        memory_save(version,member.guild)
     
 @client.event
 async def on_message(message):
+    global mem
+    mem = await memory_init(mem,message.guild)
     if message.author.id != client.user.id:
         if message.content.startswith("/"):
             await command_handler(message)
         else:
+            await report (message)
             if CCP:
                 await ccp_filter(message)
             await n_counter(message)

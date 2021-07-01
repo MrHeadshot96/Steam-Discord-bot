@@ -6,7 +6,7 @@ art_list= []
 
 def splash():
     if (os.path.isfile(folder)):
-        fd = open(folder,"r")
+        fd = open(folder,"r",encoding="utf16")
         data = fd.readlines()
         line = ""
         last_char = ""
@@ -19,6 +19,7 @@ def splash():
                 if art != "":
                     art_list.append(art)
                 art= ""
+        art_list.append(art)
         n = random.randrange(0,len(art_list))
         print (art_list[n])
     else:
