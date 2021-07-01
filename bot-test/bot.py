@@ -156,14 +156,18 @@ async def ccp_filter(message):
     
 async def n_counter(message):
     for nword in n_word:
-        if nword in message.content.lower():
+        mess = message.content.lower()
+        ''.join(e for e in mess if e.isalnum())
+        if nword in mess:
             name = message.author.name
             if name in counter:
                 val = counter[name]
-                val2 = message.content.lower().count(nword)
+                for nword in mess:
+                    val2 =+ 1
                 counter[name] = val + val2
             else:
-                val2 = message.content.lower().count(nword)
+                for nword in mess:
+                    val2 =+ 1
                 counter.update({name : val2})
             global version
             await memory_save(version,message.guild)
