@@ -8,15 +8,20 @@ from os import path
 from art_parse import splash
 from dotenv import load_dotenv
 from datetime import datetime
+from langdetect import detect
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
-help_message = "/free - free games \n/counter - n-word counter"
-command_list = ["counter","free","refresh"]
-n_word = ["nigger","nigga"]
+help_message = ["free       - free games\n",
+                "counter - n-word counter\n",
+                "log        - upload logs (operator only!)\n",
+                "refresh - refreshes memory (operator only!)\n"]
+command_list = ["counter","free","refresh","log"]
+n_word = ["nigg"]
 filterd = ["china","taiwan"]
+prefix = "/"
 mem = {}
 social = {}
 counter = {}
@@ -55,7 +60,7 @@ async def counter_display(message):
     else:
         if "@" in message.content:
             id = message.content
-            id = id.replace('/counter ','')
+            id = id.replace((prefix + 'counter '),'')
             id = id_clean(id)
             user = await client.fetch_user(int(id))
             user = user.name
@@ -90,6 +95,7 @@ async def memory_init(mem,guild):
     global CCP
     global social
     global counter
+    global prefix
     if not (path.exists("cache")):
         os.mkdir('cache')
     file_name ="cache/cache"
@@ -104,6 +110,7 @@ async def memory_init(mem,guild):
             social.update({member.id : 1000})
         mem["social"] = social
         mem["counter"] = counter
+        mem["prefix"] = prefix
         memory = open(file_name,'w')
         json.dump(mem,memory, indent=4)
     else:
@@ -114,6 +121,7 @@ async def memory_init(mem,guild):
         CCP = mem["CCP"]
         social = mem["social"]
         counter = mem["counter"]
+        prefix = mem["prefix"]
     memory.close()
     return mem
     
@@ -126,6 +134,7 @@ async def memory_save(version,guild):
     mem["CCP"] = CCP
     mem["social"] = social
     mem["counter"] = counter
+    mem["prefix"] = prefix
     json.dump(mem,memory, indent=4)
     memory.close()
         
@@ -133,7 +142,11 @@ async def memory_save(version,guild):
 async def command_handler(message):
     content = message.content.split()
     command = content[0]
-    command = command.replace('/','')
+    response = ""
+    par1 = ""
+    if (len(content) > 1):
+        par1 = content[1]
+    command = command.replace(prefix,'')
     if command in command_list:
         await report_mes (message)
         if command == "free":
@@ -141,13 +154,33 @@ async def command_handler(message):
         elif command == "counter":
             response = await counter_display(message)
         elif command == "refresh":
-            global mem
-            mem = await memory_init(mem,message.guild)
-            response = "refreshed"
+            if ("operator" in [y.name.lower() for y in message.author.roles]):
+                global mem
+                mem = await memory_init(mem,message.guild)
+                response = "refreshed"
+            else:
+                response += message.author.name + " not operator"
+        elif (command == "log"):
+            if ("operator" in [y.name.lower() for y in message.author.roles]):
+                file_name = "log"
+                if par1 == "all":
+                    response = "send:\n"
+                    for guild in client.guilds:
+                        file_name +="."+str(guild.id)+"."+ str(guild.name) +".txt"
+                        await message.channel.send(file = discord.File('./log/' + file_name) )
+                        response += file_name + "\n"
+                        file_name ="log"
+                else:
+                    file_name +="."+str(message.guild.id)+"."+ str(message.guild.name) +".txt"
+                    await message.channel.send(file = discord.File('./log/' + file_name) )
+                    response += file_name
+            else:
+                response += message.author.name + " not operator"
         await message.channel.send(response)
     else:
         await report_mes (message)
-        response = help_message
+        for mess_line in help_message:
+            response += prefix + mess_line
         await message.channel.send(response)
     
     
@@ -176,9 +209,11 @@ async def n_counter(message):
 async def on_ready():
     splash()
     global mem
+    print(
+        f'{client.user} v{version} is connected to the following guild:\n'
+    )
     for guild in client.guilds:
         print(
-            f'{client.user} v{version} is connected to the following guild:\n'
             f'{await time_n()}{guild.name}(id: {guild.id})\n'
         )
         print ("    ", str(guild.member_count) + " members:")
@@ -198,10 +233,12 @@ async def on_member_join(member):
     
 @client.event
 async def on_message(message):
+    language = detect(message.content)
+    print (language)
     global mem
     mem = await memory_init(mem,message.guild)
     if message.author.id != client.user.id:
-        if message.content.startswith("/"):
+        if message.content.startswith(prefix):
             await command_handler(message)
         else:
             if CCP:
