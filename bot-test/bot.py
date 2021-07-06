@@ -8,7 +8,6 @@ from os import path
 from art_parse import splash
 from dotenv import load_dotenv
 from datetime import datetime
-from langdetect import detect
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -17,17 +16,19 @@ client = discord.Client(intents=intents)
 help_message = ["free       - free games\n",
                 "counter - n-word counter\n",
                 "log        - upload logs (operator only!)\n",
-                "refresh - refreshes memory (operator only!)\n"]
-command_list = ["counter","free","refresh","log"]
+                "refresh - refreshes memory (operator only!)\n",
+                "prefix - change bot command prefix (operator only!)\n"]
+command_list = ["counter","free","refresh","log","prefix"]
 n_word = ["nigg"]
 filterd = ["china","taiwan"]
 prefix = "/"
+URL_1 = "https://steamcommunity.com/groups/GrabFreeGames/rss/"
 mem = {}
 social = {}
 counter = {}
 version = 1
 CCP = False
-
+#log message to log file . <message>
 async def report_mes(message):
     if not (path.exists("log")):
         os.mkdir('log')
@@ -42,18 +43,19 @@ async def report_mes(message):
     log_f = open(file_name,'a')
     log_f.write(mess+"\n")
     log_f.close()
-    
+#get current time.
 async def time_n():
     now = datetime.now()
     current_time = now.strftime("[%D|%H:%M:%S]")
     return current_time
-
+#clean trash characters of from member.id
 async def id_clean(id):
     id = id.replace('@','')
     id = id.replace('>','')
     id = id.replace('<','')
     id = id.replace('!','')
     return id
+#command to display n_counter values in a neat way
 async def counter_display(message):
     if len(counter) == 0:
         response = "failed to get counter"
@@ -74,21 +76,23 @@ async def counter_display(message):
             for name in counter:
                 response += name + " said the N-Word " +  str(counter[name]) + " times.\n"
     return response
-
-async def feed_pars():
-    games = ["Free games :video_game: :"]
-    feed = feedparser.parse("https://steamcommunity.com/groups/GrabFreeGames/rss/")
-    feed_entries = feed.entries
-    for entry in feed.entries:
+#RSS parser (RSS URL)
+async def feed_pars(URL):
+    games = ""
+    f = feedparser.parse(URL)
+    games += f.feed.title + "\n"
+    for entry in f.entries:
             article_title = entry.title
-            games += [article_title]
+            artticle_date = entry.published_parsed
+            
+            games += str([article_title])+" - "+str(artticle_date[2])+"."+ str(artticle_date[1])+"."+ str(artticle_date[0])+ "\n"
     response = str(games)
     response = response.replace('[','')
     response = response.replace(']','')
     response = response.replace('\'','')
     response = response.replace(',','\n')
     return response
-        
+#memory initialization/refresh       
 async def memory_init(mem,guild):
     global n_word
     global filterd    
@@ -124,7 +128,7 @@ async def memory_init(mem,guild):
         prefix = mem["prefix"]
     memory.close()
     return mem
-    
+#save memory
 async def memory_save(version,guild):
     file_name ="cache/cache"
     file_name +="."+str(guild.id)+"."+ str(version) +".json"
@@ -138,8 +142,9 @@ async def memory_save(version,guild):
     json.dump(mem,memory, indent=4)
     memory.close()
         
-@client.event
 async def command_handler(message):
+    global prefix
+    global version
     content = message.content.split()
     command = content[0]
     response = ""
@@ -150,7 +155,7 @@ async def command_handler(message):
     if command in command_list:
         await report_mes (message)
         if command == "free":
-            response = await feed_pars()
+            response = await feed_pars(URL_1)
         elif command == "counter":
             response = await counter_display(message)
         elif command == "refresh":
@@ -176,14 +181,20 @@ async def command_handler(message):
                     response += file_name
             else:
                 response += message.author.name + " not operator"
+        elif (command == "prefix"):
+            if ("operator" in [y.name.lower() for y in message.author.roles]):
+                prefix = par1
+                await memory_save(version,message.guild)
+                response += "Prefix changed to \"" + prefix + "\""
+            else:
+                response += message.author.name + " not operator"
         await message.channel.send(response)
     else:
         await report_mes (message)
         for mess_line in help_message:
             response += prefix + mess_line
         await message.channel.send(response)
-    
-    
+        
 async def ccp_filter(message):
     pass
     
@@ -233,8 +244,6 @@ async def on_member_join(member):
     
 @client.event
 async def on_message(message):
-    language = detect(message.content)
-    print (language)
     global mem
     mem = await memory_init(mem,message.guild)
     if message.author.id != client.user.id:
