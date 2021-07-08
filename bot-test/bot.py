@@ -13,12 +13,13 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
-help_message = ["free       - free games\n",
+help_message = ["free        - free games\n",
                 "counter - n-word counter\n",
-                "log        - upload logs (operator only!)\n",
-                "refresh - refreshes memory (operator only!)\n",
-                "prefix - change bot command prefix (operator only!)\n"]
-command_list = ["counter","free","refresh","log","prefix"]
+                "play       - play music from youtube\n",
+                "refresh  - refreshes memory (operator only!)\n",
+                "prefix    - change bot command prefix (operator only!)\n",
+                "log          - upload logs (operator only!)\n"]
+command_list = ["counter","free","refresh","log","prefix","play"]
 n_word = ["nigg"]
 filterd = ["china","taiwan"]
 prefix = "/"
@@ -28,6 +29,20 @@ social = {}
 counter = {}
 version = 1
 CCP = False
+#music player
+async def play_m(message,par):
+    response = ""
+    if not(message.author.voice == None):
+        channel = message.author.voice.channel
+        if client.user.voice.channel != channel:
+            channel = message.author.voice.channel
+            await channel.connect()
+            response += "Connected to " + str(message.author.voice.channel)
+        else:
+            response += "Already connecte to " + str(message.author.voice.channel)
+    else:
+        response = "You are not in a voice channel"
+    return response
 #log message to log file . <message>
 async def report_mes(message):
     if not (path.exists("log")):
@@ -158,6 +173,8 @@ async def command_handler(message):
             response = await feed_pars(URL_1)
         elif command == "counter":
             response = await counter_display(message)
+        elif command == "play":
+            response = await play_m(message,par1)
         elif command == "refresh":
             if ("operator" in [y.name.lower() for y in message.author.roles]):
                 global mem
@@ -215,7 +232,7 @@ async def n_counter(message):
                 counter.update({name : val2})
             global version
             await memory_save(version,message.guild)
-   
+
 @client.event
 async def on_ready():
     splash()
