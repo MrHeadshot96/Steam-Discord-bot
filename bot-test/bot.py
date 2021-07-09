@@ -2,14 +2,18 @@ import os
 import feedparser
 import webbrowser
 import discord
+from discord import FFmpegPCMAudio, PCMVolumeTransformer
 import json
 import os.path
+import pafy
 from os import path
 from art_parse import splash
 from dotenv import load_dotenv
 from datetime import datetime
+from youtubesearchpython import VideosSearch
 
 load_dotenv()
+FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn'}
 TOKEN = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
@@ -19,7 +23,7 @@ help_message = ["free        - free games\n",
                 "refresh  - refreshes memory (operator only!)\n",
                 "prefix    - change bot command prefix (operator only!)\n",
                 "log          - upload logs (operator only!)\n"]
-command_list = ["counter","free","refresh","log","prefix","play"]
+command_list = ["counter","free","refresh","log","prefix","play","stop"]
 n_word = ["nigg"]
 filterd = ["china","taiwan"]
 prefix = "/"
@@ -32,14 +36,38 @@ CCP = False
 #music player
 async def play_m(message,par):
     response = ""
+    URL = par
     if not(message.author.voice == None):
         channel = message.author.voice.channel
-        if client.user.voice.channel != channel:
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+        if (voice == None):
             channel = message.author.voice.channel
-            await channel.connect()
+            vc = await channel.connect()
+            song = pafy.new(URL)  # creates a new pafy object
+            audio = song.getbestaudio()  # gets an audio source
+            source = FFmpegPCMAudio(audio.url, **FFMPEG_OPTIONS)
+            vc.play(source)  # play the source
+            response += "Connected to " + str(message.author.voice.channel)
+        elif (voice.channel != message.author.voice.channel):
+            channel = message.author.voice.channel
+            await voice.move_to(message.author.voice.channel)
             response += "Connected to " + str(message.author.voice.channel)
         else:
-            response += "Already connecte to " + str(message.author.voice.channel)
+            response += "Already connected to " + str(voice.channel)
+    else:
+        response = "You are not in a voice channel"
+    return response
+async def stop_m(message,par):
+    response = ""
+    if not(message.author.voice == None):
+        channel = message.author.voice.channel
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+        if (voice != None):
+            channel = message.author.voice.channel
+            await voice.disconnect()
+            response += "Disconnected from " + str(voice.channel)
+        else:
+            response += "I am not connected "
     else:
         response = "You are not in a voice channel"
     return response
@@ -175,6 +203,8 @@ async def command_handler(message):
             response = await counter_display(message)
         elif command == "play":
             response = await play_m(message,par1)
+        elif command == "stop":
+            response = await stop_m(message,par1)
         elif command == "refresh":
             if ("operator" in [y.name.lower() for y in message.author.roles]):
                 global mem
