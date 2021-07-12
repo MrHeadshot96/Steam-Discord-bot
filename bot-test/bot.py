@@ -2,6 +2,7 @@ import os
 import feedparser
 import webbrowser
 import discord
+import ffmpeg
 from discord import FFmpegPCMAudio, PCMVolumeTransformer
 import json
 import os.path
@@ -20,10 +21,13 @@ client = discord.Client(intents=intents)
 help_message = ["free        - free games\n",
                 "counter - n-word counter\n",
                 "play       - play music from youtube\n",
+                "stop       - stop music from youtube\n",
+                "pause     - pause music from youtube\n",
+                "resume    - resume music from youtube\n",
                 "refresh  - refreshes memory (operator only!)\n",
                 "prefix    - change bot command prefix (operator only!)\n",
                 "log          - upload logs (operator only!)\n"]
-command_list = ["counter","free","refresh","log","prefix","play","stop"]
+command_list = ["counter","free","refresh","log","prefix","play","stop","pause","resume"]
 n_word = ["nigg"]
 filterd = ["china","taiwan"]
 prefix = "/"
@@ -36,7 +40,12 @@ CCP = False
 #music player
 async def play_m(message,par):
     response = ""
-    URL = par
+    if par.startswith("http"):
+        URL = par
+    else:
+        result = VideosSearch(par,limit = 1)
+        pest = result.result()['result'][0]
+        URL = pest["link"]
     if not(message.author.voice == None):
         channel = message.author.voice.channel
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
@@ -47,13 +56,18 @@ async def play_m(message,par):
             audio = song.getbestaudio()  # gets an audio source
             source = FFmpegPCMAudio(audio.url, **FFMPEG_OPTIONS)
             vc.play(source)  # play the source
-            response += "Connected to " + str(message.author.voice.channel)
-        elif (voice.channel != message.author.voice.channel):
-            channel = message.author.voice.channel
-            await voice.move_to(message.author.voice.channel)
-            response += "Connected to " + str(message.author.voice.channel)
+            response += "playing:\n" + URL
         else:
-            response += "Already connected to " + str(voice.channel)
+            if (voice.channel != message.author.voice.channel):
+                channel = message.author.voice.channel
+                await voice.move_to(message.author.voice.channel)
+            if voice.is_playing():
+                response = "paused"
+            else:
+                song = pafy.new(URL)  # creates a new pafy object
+                audio = song.getbestaudio()  # gets an audio source
+                source = FFmpegPCMAudio(audio.url, **FFMPEG_OPTIONS)
+                voice.play(source)  # play the source
     else:
         response = "You are not in a voice channel"
     return response
@@ -70,6 +84,18 @@ async def stop_m(message,par):
             response += "I am not connected "
     else:
         response = "You are not in a voice channel"
+    return response
+async def pause_m(message,par):
+    response = ""
+    voice = discord.utils.get(client.voice_clients, guild=message.guild)
+    voice.pause()
+    response += "song paused by " + message.author.name
+    return response
+async def resume_m(message,par):
+    response = ""
+    voice = discord.utils.get(client.voice_clients, guild=message.guild)
+    voice.resume()
+    response += "song resumed by " + message.author.name
     return response
 #log message to log file . <message>
 async def report_mes(message):
@@ -205,37 +231,34 @@ async def command_handler(message):
             response = await play_m(message,par1)
         elif command == "stop":
             response = await stop_m(message,par1)
-        elif command == "refresh":
-            if ("operator" in [y.name.lower() for y in message.author.roles]):
-                global mem
-                mem = await memory_init(mem,message.guild)
-                response = "refreshed"
-            else:
-                response += message.author.name + " not operator"
-        elif (command == "log"):
-            if ("operator" in [y.name.lower() for y in message.author.roles]):
-                file_name = "log"
-                if par1 == "all":
-                    response = "send:\n"
-                    for guild in client.guilds:
-                        file_name +="."+str(guild.id)+"."+ str(guild.name) +".txt"
+        elif command == "pause":
+            response = await pause_m(message,par1)
+        elif command == "resume":
+            response = await resume_m(message,par1)
+        if ("operator" in [y.name.lower() for y in message.author.roles]):
+            if command == "refresh":
+                    global mem
+                    mem = await memory_init(mem,message.guild)
+                    response = "refreshed"
+            elif (command == "log"):
+                    file_name = "log"
+                    if par1 == "all":
+                        response = "send:\n"
+                        for guild in client.guilds:
+                            file_name +="."+str(guild.id)+"."+ str(guild.name) +".txt"
+                            await message.channel.send(file = discord.File('./log/' + file_name) )
+                            response += file_name + "\n"
+                            file_name ="log"
+                    else:
+                        file_name +="."+str(message.guild.id)+"."+ str(message.guild.name) +".txt"
                         await message.channel.send(file = discord.File('./log/' + file_name) )
-                        response += file_name + "\n"
-                        file_name ="log"
-                else:
-                    file_name +="."+str(message.guild.id)+"."+ str(message.guild.name) +".txt"
-                    await message.channel.send(file = discord.File('./log/' + file_name) )
-                    response += file_name
-            else:
-                response += message.author.name + " not operator"
-        elif (command == "prefix"):
-            if ("operator" in [y.name.lower() for y in message.author.roles]):
-                prefix = par1
-                await memory_save(version,message.guild)
-                response += "Prefix changed to \"" + prefix + "\""
-            else:
-                response += message.author.name + " not operator"
-        await message.channel.send(response)
+                        response += file_name
+            elif (command == "prefix"):
+                    prefix = par1
+                    await memory_save(version,message.guild)
+                    response += "Prefix changed to \"" + prefix + "\""
+        if (len(response) > 0):
+            await message.channel.send(response)
     else:
         await report_mes (message)
         for mess_line in help_message:

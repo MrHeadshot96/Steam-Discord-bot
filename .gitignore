@@ -76,3 +76,4 @@ jspm_packages
 
 # Heroku Env
 .env
+bot-test/ffmpeg.exe
