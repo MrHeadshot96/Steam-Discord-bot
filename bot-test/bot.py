@@ -12,12 +12,14 @@ from art_parse import splash
 from dotenv import load_dotenv
 from datetime import datetime
 from youtubesearchpython import VideosSearch
+from discord.ext import commands
 
 load_dotenv()
 FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn'}
 TOKEN = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.all()
-client = discord.Client(intents=intents)
+prefix = "/"
+client = commands.Bot(command_prefix='!', intents =intents)
 help_message = ["free        - free games\n",
                 "counter - n-word counter\n",
                 "play       - play music from youtube\n",
@@ -30,13 +32,17 @@ help_message = ["free        - free games\n",
 command_list = ["counter","free","refresh","log","prefix","play","stop","pause","resume"]
 n_word = ["nigg"]
 filterd = ["china","taiwan"]
-prefix = "/"
 URL_1 = "https://steamcommunity.com/groups/GrabFreeGames/rss/"
 mem = {}
 social = {}
 counter = {}
 version = 1
 CCP = False
+@client.command(name="test",command_prefix=prefix)  
+async def test(ctx, arg):
+    print("test\n\n")
+    await ctx.send(arg)
+
 #music player
 async def play_m(message,par):
     response = ""
@@ -62,7 +68,12 @@ async def play_m(message,par):
                 channel = message.author.voice.channel
                 await voice.move_to(message.author.voice.channel)
             if voice.is_playing():
-                response = "paused"
+                voice.stop()
+                song = pafy.new(URL)  # creates a new pafy object
+                audio = song.getbestaudio()  # gets an audio source
+                source = FFmpegPCMAudio(audio.url, **FFMPEG_OPTIONS)
+                voice.play(source)  # play the source
+                response += "playing:\n" + URL
             else:
                 song = pafy.new(URL)  # creates a new pafy object
                 audio = song.getbestaudio()  # gets an audio source
@@ -324,4 +335,5 @@ async def on_message(message):
                 await ccp_filter(message)
             await n_counter(message)
             await report_mes (message)
+    await client.process_commands(message)
 client.run(TOKEN)

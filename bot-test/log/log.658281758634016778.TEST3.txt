@@ -13,3 +13,4 @@
 [07/08/21|16:49:43]TEST3:Mother of Pus#9584"/prefix !"
 [07/08/21|16:49:58]TEST3:Mother of Pus#9584"/help"
 [07/08/21|16:50:01]TEST3:Mother of Pus#9584"/prefix !"
+[07/15/21|16:26:32]TEST3:Mother of Pus#9584"/play"
