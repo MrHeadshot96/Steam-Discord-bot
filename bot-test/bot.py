@@ -19,17 +19,8 @@ FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconne
 TOKEN = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.all()
 prefix = "/"
-client = commands.Bot(command_prefix='!', intents =intents)
-help_message = ["free        - free games\n",
-                "counter - n-word counter\n",
-                "play       - play music from youtube\n",
-                "stop       - stop music from youtube\n",
-                "pause     - pause music from youtube\n",
-                "resume    - resume music from youtube\n",
-                "refresh  - refreshes memory (operator only!)\n",
-                "prefix    - change bot command prefix (operator only!)\n",
-                "log          - upload logs (operator only!)\n"]
-command_list = ["counter","free","refresh","log","prefix","play","stop","pause","resume"]
+help_command = commands.DefaultHelpCommand( no_category = 'Commands')
+client = commands.Bot(command_prefix=prefix, intents =intents, help_command = help_command)
 n_word = ["nigg"]
 filterd = ["china","taiwan"]
 URL_1 = "https://steamcommunity.com/groups/GrabFreeGames/rss/"
@@ -38,18 +29,52 @@ social = {}
 counter = {}
 version = 1
 CCP = False
-@client.command(name="test",command_prefix=prefix)  
-async def test(ctx, arg):
-    print("test\n\n")
-    await ctx.send(arg)
 
-#music player
-async def play_m(message,par):
-    response = ""
-    if par.startswith("http"):
-        URL = par
+@client.command(name='logs',brief='Show logs.', description='Show logs from the bot. Use /logs all for logs from all servers. (operator role only)',pass_context=True)
+@commands.has_role("operator")
+async def logs(ctx,arg=''):
+    message=ctx.message
+    file_name = "log"
+    response = "send:\n"
+    if arg == "all":
+        for guild in client.guilds:
+            file_name +="."+str(guild.id)+"."+ str(guild.name) +".txt"
+            await ctx.channel.send(file = discord.File('./log/' + file_name) )
+            response += file_name + "\n"
+            file_name ="log"
     else:
-        result = VideosSearch(par,limit = 1)
+        file_name +="."+str(message.guild.id)+"."+ str(message.guild.name) +".txt"
+        await ctx.channel.send(file = discord.File('./log/' + file_name) )
+        response += file_name
+    await ctx.send(response)
+@client.command(name='prefix',brief='Set prefix.', description='Changes the prefix of the bot commands. (operator role only)')
+@commands.has_role("operator")
+async def prefix(ctx,arg):
+    response=""
+    global prefix
+    message=ctx.message
+    prefix = arg
+    client.command_prefix = prefix
+    await memory_save(version,message.guild)
+    response += "Prefix changed to " + prefix 
+    await ctx.send(response)
+@client.command(brief='N word counter.',description='Show how many time a user has said the N word.')  
+async def counter(ctx):
+    response = await counter_display(ctx.message)
+    await ctx.send(response)
+@client.command(brief='Show free games.',description='Show free games.')  
+async def free(ctx):
+    response = await feed_pars(URL_1)
+    await ctx.send(response)
+#music player
+@client.command(name="play",brief='Play music from youtube',description='Play music from youtube.')  
+async def play_m(ctx,arg):
+    message = ctx.message
+    response = ""
+    if arg.startswith("http"):
+        URL = arg
+    else:
+        result = VideosSearch(arg,limit = 1)
         pest = result.result()['result'][0]
         URL = pest["link"]
     if not(message.author.voice == None):
@@ -81,9 +106,11 @@ async def play_m(message,par):
                 voice.play(source)  # play the source
     else:
         response = "You are not in a voice channel"
-    return response
-async def stop_m(message,par):
+    await ctx.send(response)
+@client.command(name="stop",brief='Stop music from youtube.',description='Stop music from youtube.')  
+async def stop_m(ctx):
     response = ""
+    message = ctx.message
     if not(message.author.voice == None):
         channel = message.author.voice.channel
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
@@ -95,19 +122,23 @@ async def stop_m(message,par):
             response += "I am not connected "
     else:
         response = "You are not in a voice channel"
-    return response
-async def pause_m(message,par):
+    await ctx.send(response)
+@client.command(name="pause",brief='Pause music from youtube.',description='Pause music from youtube.')  
+async def pause_m(ctx):
+    message = ctx.message
     response = ""
     voice = discord.utils.get(client.voice_clients, guild=message.guild)
     voice.pause()
     response += "song paused by " + message.author.name
-    return response
-async def resume_m(message,par):
+    await ctx.send(response)
+@client.command(name="resume",brief='Resume music from youtube.',description='Resume music from youtube.')  
+async def resume_m(ctx):
+    message = ctx.message
     response = ""
     voice = discord.utils.get(client.voice_clients, guild=message.guild)
     voice.resume()
     response += "song resumed by " + message.author.name
-    return response
+    await ctx.send(response)
 #log message to log file . <message>
 async def report_mes(message):
     if not (path.exists("log")):
@@ -143,7 +174,7 @@ async def counter_display(message):
         if "@" in message.content:
             id = message.content
             id = id.replace((prefix + 'counter '),'')
-            id = id_clean(id)
+            id = await id_clean(id)
             user = await client.fetch_user(int(id))
             user = user.name
             user = str(user)
@@ -221,61 +252,7 @@ async def memory_save(version,guild):
     mem["prefix"] = prefix
     json.dump(mem,memory, indent=4)
     memory.close()
-        
-async def command_handler(message):
-    global prefix
-    global version
-    content = message.content.split()
-    command = content[0]
-    response = ""
-    par1 = ""
-    if (len(content) > 1):
-        par1 = content[1]
-    command = command.replace(prefix,'')
-    if command in command_list:
-        await report_mes (message)
-        if command == "free":
-            response = await feed_pars(URL_1)
-        elif command == "counter":
-            response = await counter_display(message)
-        elif command == "play":
-            response = await play_m(message,par1)
-        elif command == "stop":
-            response = await stop_m(message,par1)
-        elif command == "pause":
-            response = await pause_m(message,par1)
-        elif command == "resume":
-            response = await resume_m(message,par1)
-        if ("operator" in [y.name.lower() for y in message.author.roles]):
-            if command == "refresh":
-                    global mem
-                    mem = await memory_init(mem,message.guild)
-                    response = "refreshed"
-            elif (command == "log"):
-                    file_name = "log"
-                    if par1 == "all":
-                        response = "send:\n"
-                        for guild in client.guilds:
-                            file_name +="."+str(guild.id)+"."+ str(guild.name) +".txt"
-                            await message.channel.send(file = discord.File('./log/' + file_name) )
-                            response += file_name + "\n"
-                            file_name ="log"
-                    else:
-                        file_name +="."+str(message.guild.id)+"."+ str(message.guild.name) +".txt"
-                        await message.channel.send(file = discord.File('./log/' + file_name) )
-                        response += file_name
-            elif (command == "prefix"):
-                    prefix = par1
-                    await memory_save(version,message.guild)
-                    response += "Prefix changed to \"" + prefix + "\""
-        if (len(response) > 0):
-            await message.channel.send(response)
-    else:
-        await report_mes (message)
-        for mess_line in help_message:
-            response += prefix + mess_line
-        await message.channel.send(response)
-        
+    
 async def ccp_filter(message):
     pass
     
@@ -328,12 +305,9 @@ async def on_message(message):
     global mem
     mem = await memory_init(mem,message.guild)
     if message.author.id != client.user.id:
-        if message.content.startswith(prefix):
-            await command_handler(message)
-        else:
-            if CCP:
-                await ccp_filter(message)
-            await n_counter(message)
-            await report_mes (message)
+        await report_mes (message)
+        if CCP:
+            await ccp_filter(message)
+        await n_counter(message)
     await client.process_commands(message)
 client.run(TOKEN)
