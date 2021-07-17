@@ -30,135 +30,150 @@ counter = {}
 version = 1
 CCP = False
 
-@client.command(name='logs',brief='Show logs.', description='Show logs from the bot. Use /logs all for logs from all servers. (operator role only)',pass_context=True)
-@commands.has_role("operator")
-async def logs(ctx,arg=''):
-    message=ctx.message
-    file_name = "log"
-    response = "send:\n"
-    if arg == "all":
-        for guild in client.guilds:
-            file_name +="."+str(guild.id)+"."+ str(guild.name) +".txt"
-            await ctx.channel.send(file = discord.File('./log/' + file_name) )
-            response += file_name + "\n"
-            file_name ="log"
-    else:
-        file_name +="."+str(message.guild.id)+"."+ str(message.guild.name) +".txt"
-        await ctx.channel.send(file = discord.File('./log/' + file_name) )
-        response += file_name
-    await ctx.send(response)
-@client.command(name='prefix',brief='Set prefix.', description='Changes the prefix of the bot commands. (operator role only)')
-@commands.has_role("operator")
-async def prefix(ctx,arg):
-    response=""
-    global prefix
-    message=ctx.message
-    prefix = arg
-    client.command_prefix = prefix
-    await memory_save(version,message.guild)
-    response += "Prefix changed to " + prefix 
-    await ctx.send(response)
-@client.command(brief='N word counter.',description='Show how many time a user has said the N word.')  
-async def counter(ctx):
-    response = await counter_display(ctx.message)
-    await ctx.send(response)
-@client.command(brief='Show free games.',description='Show free games.')  
-async def free(ctx):
-    response = await feed_pars(URL_1)
-    await ctx.send(response)
-#music player
-@client.command(name="play",brief='Play music from youtube',description='Play music from youtube.')  
-async def play_m(ctx,arg):
-    message = ctx.message
-    response = ""
-    if arg.startswith("http"):
-        URL = arg
-    else:
-        result = VideosSearch(arg,limit = 1)
-        pest = result.result()['result'][0]
-        URL = pest["link"]
-    if not(message.author.voice == None):
-        channel = message.author.voice.channel
-        voice = discord.utils.get(client.voice_clients, guild=message.guild)
-        if (voice == None):
-            channel = message.author.voice.channel
-            vc = await channel.connect()
-            song = pafy.new(URL)  # creates a new pafy object
-            audio = song.getbestaudio()  # gets an audio source
-            source = FFmpegPCMAudio(audio.url, **FFMPEG_OPTIONS)
-            vc.play(source)  # play the source
-            response += "playing:\n" + URL
+
+class Operator_commands(commands.Cog):
+    @commands.command(name='logs',brief='Show logs. *', description='Show logs from the bot. Use /logs all for logs from all servers. (operator role only)',pass_context=True)
+    @commands.has_role("operator")
+    async def logs_c(self, ctx, arg=''):
+        message=ctx.message
+        file_name = "log"
+        response = "send:\n"
+        if arg == "all":
+            for guild in client.guilds:
+                file_name +="."+str(guild.id)+"."+ str(guild.name) +".txt"
+                await ctx.channel.send(file = discord.File('./log/' + file_name) )
+                response += file_name + "\n"
+                file_name ="log"
         else:
-            if (voice.channel != message.author.voice.channel):
+            file_name +="."+str(message.guild.id)+"."+ str(message.guild.name) +".txt"
+            await ctx.channel.send(file = discord.File('./log/' + file_name) )
+            response += file_name
+        await ctx.send(response)
+        
+    @commands.command(name='prefix',brief='Set prefix. *', description='Changes the prefix of the bot commands. (operator role only)')
+    @commands.has_role("operator")
+    async def prefix_c(self, ctx, arg):
+        response=""
+        global prefix
+        message=ctx.message
+        prefix = arg
+        client.command_prefix = prefix
+        await memory_save(version,message.guild)
+        response += "Prefix changed to " + prefix 
+        await ctx.send(response)
+
+#music player
+class Music_Commands(commands.Cog):
+    @commands.command(name="play",brief='Play music from youtube',description='Play music from youtube.')  
+    async def play_m(self, ctx, arg):
+        message = ctx.message
+        response = ""
+        if arg.startswith("http"):
+            URL = arg
+        else:
+            result = VideosSearch(arg,limit = 1)
+            pest = result.result()['result'][0]
+            URL = pest["link"]
+        if not(message.author.voice == None):
+            channel = message.author.voice.channel
+            voice = discord.utils.get(client.voice_clients, guild=message.guild)
+            if (voice == None):
                 channel = message.author.voice.channel
-                await voice.move_to(message.author.voice.channel)
-            if voice.is_playing():
-                voice.stop()
+                vc = await channel.connect()
                 song = pafy.new(URL)  # creates a new pafy object
                 audio = song.getbestaudio()  # gets an audio source
                 source = FFmpegPCMAudio(audio.url, **FFMPEG_OPTIONS)
-                voice.play(source)  # play the source
+                vc.play(source)  # play the source
                 response += "playing:\n" + URL
             else:
-                song = pafy.new(URL)  # creates a new pafy object
-                audio = song.getbestaudio()  # gets an audio source
-                source = FFmpegPCMAudio(audio.url, **FFMPEG_OPTIONS)
-                voice.play(source)  # play the source
-    else:
-        response = "You are not in a voice channel"
-    await ctx.send(response)
-@client.command(name="stop",brief='Stop music from youtube.',description='Stop music from youtube.')  
-async def stop_m(ctx):
-    response = ""
-    message = ctx.message
-    if not(message.author.voice == None):
-        channel = message.author.voice.channel
-        voice = discord.utils.get(client.voice_clients, guild=message.guild)
-        if (voice != None):
-            channel = message.author.voice.channel
-            await voice.disconnect()
-            response += "Disconnected from " + str(voice.channel)
+                if (voice.channel != message.author.voice.channel):
+                    channel = message.author.voice.channel
+                    await voice.move_to(message.author.voice.channel)
+                if voice.is_playing():
+                    voice.stop()
+                    song = pafy.new(URL)  # creates a new pafy object
+                    audio = song.getbestaudio()  # gets an audio source
+                    source = FFmpegPCMAudio(audio.url, **FFMPEG_OPTIONS)
+                    voice.play(source)  # play the source
+                    response += "playing:\n" + URL
+                else:
+                    song = pafy.new(URL)  # creates a new pafy object
+                    audio = song.getbestaudio()  # gets an audio source
+                    source = FFmpegPCMAudio(audio.url, **FFMPEG_OPTIONS)
+                    voice.play(source)  # play the source
         else:
-            response += "I am not connected "
-    else:
-        response = "You are not in a voice channel"
-    await ctx.send(response)
-@client.command(name="pause",brief='Pause music from youtube.',description='Pause music from youtube.')  
-async def pause_m(ctx):
-    message = ctx.message
-    response = ""
-    voice = discord.utils.get(client.voice_clients, guild=message.guild)
-    voice.pause()
-    response += "song paused by " + message.author.name
-    await ctx.send(response)
-@client.command(name="resume",brief='Resume music from youtube.',description='Resume music from youtube.')  
-async def resume_m(ctx):
-    message = ctx.message
-    response = ""
-    voice = discord.utils.get(client.voice_clients, guild=message.guild)
-    voice.resume()
-    response += "song resumed by " + message.author.name
-    await ctx.send(response)
+            response = "You are not in a voice channel"
+        await ctx.send(response)
+    
+    @commands.command(name="stop",brief='Stop music from youtube.',description='Stop music from youtube.')  
+    async def stop_m(self, ctx):
+        response = ""
+        message = ctx.message
+        if not(message.author.voice == None):
+            channel = message.author.voice.channel
+            voice = discord.utils.get(client.voice_clients, guild=message.guild)
+            if (voice != None):
+                channel = message.author.voice.channel
+                await voice.disconnect()
+                response += "Disconnected from " + str(voice.channel)
+            else:
+                response += "I am not connected "
+        else:
+            response = "You are not in a voice channel"
+        await ctx.send(response)
+    
+    @commands.command(name="pause",brief='Pause music from youtube.',description='Pause music from youtube.')  
+    async def pause_m(self, ctx):
+        message = ctx.message
+        response = ""
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+        voice.pause()
+        response += "song paused by " + message.author.name
+        await ctx.send(response)
+    
+    @commands.command(name="resume",brief='Resume music from youtube.',description='Resume music from youtube.')  
+    async def resume_m(self, ctx):
+        message = ctx.message
+        response = ""
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+        voice.resume()
+        response += "song resumed by " + message.author.name
+        await ctx.send(response)
+
+class General_Commands(commands.Cog):
+    @commands.command(name="counter",brief='N word counter.',description='Show how many time a user has said the N word.')  
+    async def counter_c(self, ctx):
+        response = await counter_display(ctx.message)
+        await ctx.send(response)
+        
+    @commands.command(name="free",brief='Show free games.',description='Show free games.')  
+    async def free_c(self, ctx):
+        response = await feed_pars(URL_1)
+        await ctx.send(response)
+
 #log message to log file . <message>
 async def report_mes(message):
+    ctx = await client.get_context(message)
     if not (path.exists("log")):
         os.mkdir('log')
     file_name ="log/log"
     file_name +="."+str(message.guild.id)+"."+ str(message.guild.name) +".txt"
     mess = ""
-    if message in command_list:
-        mess += str(await time_n())+str(message.guild)+":"+str(message.author)+"used command"+str(command)
+    if (ctx.valid) and (ctx.command):
+        mess += str(await time_n())+str(message.guild)+":"+str(message.author)+" used command "+str(message.content)
     else:
-        mess += str(await time_n())+str(message.guild)+":"+str(message.author)+"\""+str(message.content)+"\""
+        mess += str(await time_n())+str(message.guild)+":"+str(message.author)+" \""+str(message.content)+"\""
     print (mess)
     log_f = open(file_name,'a')
     log_f.write(mess+"\n")
     log_f.close()
+
 #get current time.
 async def time_n():
     now = datetime.now()
     current_time = now.strftime("[%D|%H:%M:%S]")
     return current_time
+
 #clean trash characters of from member.id
 async def id_clean(id):
     id = id.replace('@','')
@@ -166,6 +181,7 @@ async def id_clean(id):
     id = id.replace('<','')
     id = id.replace('!','')
     return id
+
 #command to display n_counter values in a neat way
 async def counter_display(message):
     if len(counter) == 0:
@@ -187,6 +203,7 @@ async def counter_display(message):
             for name in counter:
                 response += name + " said the N-Word " +  str(counter[name]) + " times.\n"
     return response
+
 #RSS parser (RSS URL)
 async def feed_pars(URL):
     games = ""
@@ -203,6 +220,7 @@ async def feed_pars(URL):
     response = response.replace('\'','')
     response = response.replace(',','\n')
     return response
+
 #memory initialization/refresh       
 async def memory_init(mem,guild):
     global n_word
@@ -237,8 +255,10 @@ async def memory_init(mem,guild):
         social = mem["social"]
         counter = mem["counter"]
         prefix = mem["prefix"]
+        client.command_prefix = prefix
     memory.close()
     return mem
+
 #save memory
 async def memory_save(version,guild):
     file_name ="cache/cache"
@@ -310,4 +330,8 @@ async def on_message(message):
             await ccp_filter(message)
         await n_counter(message)
     await client.process_commands(message)
+
+client.add_cog(Operator_commands())
+client.add_cog(Music_Commands())
+client.add_cog(General_Commands())
 client.run(TOKEN)
