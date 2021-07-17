@@ -282,19 +282,15 @@ async def n_counter(message):
     for nword in n_word:
         mess = message.content.lower()
         ''.join(e for e in mess if e.isalnum())
-        if nword in mess:
-            name = message.author.name
-            if name in counter:
-                val = counter[name]
-                for nword in mess:
-                    val2 =+ 1
-                counter[name] = val + val2
-            else:
-                for nword in mess:
-                    val2 =+ 1
-                counter.update({name : val2})
-            global version
-            await memory_save(version,message.guild)
+        val2 = mess.count(nword)
+        name = message.author.name
+        if name in counter:
+            val = counter[name]
+            counter[name] = val + val2
+        else:
+            counter.update({name : val2})
+        global version
+        await memory_save(version,message.guild)
 
 @client.event
 async def on_ready():
