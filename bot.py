@@ -65,7 +65,9 @@ class Operator_commands(commands.Cog):
 #music player
 class Music_Commands(commands.Cog):
     @commands.command(name="play",brief='Play music from youtube',description='Play music from youtube.')  
-    async def play_m(self, ctx, arg):
+    async def play_m(self, ctx, *args):
+        arg = (' '.join(args))
+        print (arg)
         message = ctx.message
         response = ""
         if arg.startswith("http"):
